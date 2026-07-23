@@ -18,8 +18,8 @@ import "swiper/css/pagination";
 import "./landing-page.css";
 
 /* Replace these with the client’s actual contact details. */
-const WHATSAPP_NUMBER = "923001234567";
-const PHONE_NUMBER = "+923001234567";
+const WHATSAPP_NUMBER = "923343868945";
+const PHONE_NUMBER = "+923343868945";
 
 /* Leave empty to hide PakWheels links. */
 const PAKWHEELS_URL = "";

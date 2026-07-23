@@ -3,20 +3,29 @@
 import Image from "next/image";
 import type { MouseEvent } from "react";
 import { useEffect, useState } from "react";
+
+import { Swiper, SwiperSlide } from "swiper/react";
+import {
+  A11y,
+  Keyboard,
+  Navigation,
+  Pagination,
+} from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 import "./landing-page.css";
 
-/*
-  Replace these numbers with the client's real number.
+/* Replace these with the client’s actual contact details. */
+const WHATSAPP_NUMBER = "923001234567";
+const PHONE_NUMBER = "+923001234567";
 
-  WhatsApp number:
-  Use country code without the plus symbol.
+/* Leave empty to hide PakWheels links. */
+const PAKWHEELS_URL = "";
 
-  Phone number:
-  Use the plus symbol.
-*/
-const WHATSAPP_NUMBER = "923343868945";
-const PHONE_NUMBER = "+923343868945";
-
+const CAR_PRICE = "PKR 4,98,0000";
+const CAR_MILEAGE = "103,000 km";
 
 type CarImage = {
   src: string;
@@ -126,7 +135,7 @@ const vehicleDetails = [
   ["Make", "Honda"],
   ["Model", "BR-V"],
   ["Variant", "i-VTEC S"],
-  ["Mileage", "103,000 km"],
+  ["Mileage", CAR_MILEAGE],
   ["Engine", "1.5L i-VTEC"],
   ["Fuel type", "Petrol"],
   ["Usage", "Family used"],
@@ -136,7 +145,7 @@ const vehicleDetails = [
   ["Air conditioning", "Working properly"],
   ["Service history", "Available on request"],
   ["Location", "G-10, Islamabad"],
-  ["Demand", "PKR 5,150,000"],
+  ["Asking price", CAR_PRICE],
 ];
 
 const faqs = [
@@ -168,7 +177,7 @@ const faqs = [
   {
     question: "Is the price negotiable?",
     answer:
-      "The current demand is PKR 5,150,000. Any negotiation should be discussed directly with the seller.",
+      "The current asking price is PKR 4,98,0000. Any negotiation should be discussed directly with the seller.",
   },
 ];
 
@@ -241,52 +250,43 @@ function trackEvent(eventName: string, buttonLocation: string) {
 }
 
 function getWhatsAppUrl(buttonLocation: string) {
-  const message = `Hi, I am interested in the Honda BR-V i-VTEC S listed for PKR 5,150,000.
+  const message = `Hi, I am interested in the Honda BR-V i-VTEC S listed for ${CAR_PRICE}.
 
 Is the car still available?
 
 Enquiry source: ${buttonLocation}`;
 
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    message,
+  )}`;
 }
 
 export default function HomePage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(
+    null,
+  );
+
   const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(0);
 
-  useEffect(() => {
-    const pageShouldBeLocked =
-      mobileMenuOpen || activeImageIndex !== null;
+  const [showMobileSticky, setShowMobileSticky] = useState(true);
 
-    document.body.classList.toggle("no-scroll", pageShouldBeLocked);
+  const pakWheelsAvailable = PAKWHEELS_URL.trim().length > 0;
+
+  useEffect(() => {
+    document.body.classList.toggle(
+      "no-scroll",
+      activeImageIndex !== null,
+    );
 
     return () => {
       document.body.classList.remove("no-scroll");
     };
-  }, [mobileMenuOpen, activeImageIndex]);
+  }, [activeImageIndex]);
 
   useEffect(() => {
-    function handleKeyboard(event: KeyboardEvent) {
-      if (activeImageIndex === null) {
-        return;
-      }
-
+    function handleKeyboard(event: globalThis.KeyboardEvent) {
       if (event.key === "Escape") {
         setActiveImageIndex(null);
-      }
-
-      if (event.key === "ArrowRight") {
-        setActiveImageIndex(
-          (activeImageIndex + 1) % carImages.length,
-        );
-      }
-
-      if (event.key === "ArrowLeft") {
-        setActiveImageIndex(
-          (activeImageIndex - 1 + carImages.length) %
-            carImages.length,
-        );
       }
     }
 
@@ -295,7 +295,60 @@ export default function HomePage() {
     return () => {
       window.removeEventListener("keydown", handleKeyboard);
     };
+  }, []);
+
+  /* Preload the selected, previous and next lightbox images. */
+  useEffect(() => {
+    if (activeImageIndex === null) {
+      return;
+    }
+
+    const previousIndex =
+      (activeImageIndex - 1 + carImages.length) % carImages.length;
+
+    const nextIndex =
+      (activeImageIndex + 1) % carImages.length;
+
+    [activeImageIndex, previousIndex, nextIndex].forEach(
+      (imageIndex) => {
+        const preloadImage = new window.Image();
+        preloadImage.src = carImages[imageIndex].src;
+      },
+    );
   }, [activeImageIndex]);
+
+  /* Hide mobile sticky CTA when a section CTA is visible. */
+  useEffect(() => {
+    const ctaAreas = document.querySelectorAll<HTMLElement>(
+      "[data-hide-mobile-sticky]",
+    );
+
+    const visibleCtaAreas = new Set<Element>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            visibleCtaAreas.add(entry.target);
+          } else {
+            visibleCtaAreas.delete(entry.target);
+          }
+        });
+
+        setShowMobileSticky(visibleCtaAreas.size === 0);
+      },
+      {
+        threshold: 0.15,
+        rootMargin: "-5% 0px -12% 0px",
+      },
+    );
+
+    ctaAreas.forEach((element) => observer.observe(element));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   function handleWhatsAppClick(
     event: MouseEvent<HTMLAnchorElement>,
@@ -316,176 +369,132 @@ export default function HomePage() {
     trackEvent("phone_click", buttonLocation);
   }
 
-  function closeMobileMenu() {
-    setMobileMenuOpen(false);
-  }
-
-  function showPreviousImage() {
-    if (activeImageIndex === null) {
-      return;
-    }
-
-    setActiveImageIndex(
-      (activeImageIndex - 1 + carImages.length) %
-        carImages.length,
-    );
-  }
-
-  function showNextImage() {
-    if (activeImageIndex === null) {
-      return;
-    }
-
-    setActiveImageIndex(
-      (activeImageIndex + 1) % carImages.length,
-    );
+  function handlePakWheelsClick(buttonLocation: string) {
+    trackEvent("pakwheels_click", buttonLocation);
   }
 
   return (
     <>
-      <header className="site-header">
-        <div className="header-inner">
-          <a
-            href="#top"
-            className="site-logo"
-            aria-label="Honda BR-V listing homepage"
-          >
-            <span className="logo-symbol">H</span>
-
-            <span className="logo-text">
-              <strong>Honda BR-V</strong>
-              <small>Private Sale</small>
-            </span>
-          </a>
-
-          <nav
-            className={`main-navigation ${
-              mobileMenuOpen ? "is-open" : ""
-            }`}
-            aria-label="Main navigation"
-          >
-            <a href="#overview" onClick={closeMobileMenu}>
-              Overview
-            </a>
-
-            <a href="#gallery" onClick={closeMobileMenu}>
-              Gallery
-            </a>
-
-            <a href="#details" onClick={closeMobileMenu}>
-              Details
-            </a>
-
-            <a href="#location" onClick={closeMobileMenu}>
-              Location
-            </a>
-
-            <a
-              href={getWhatsAppUrl("header")}
-              className="header-whatsapp-button"
-              onClick={(event) =>
-                handleWhatsAppClick(event, "header")
-              }
-            >
-              <WhatsAppIcon />
-              <span>WhatsApp Seller</span>
-            </a>
-          </nav>
-
-          <button
-            type="button"
-            className={`mobile-menu-button ${
-              mobileMenuOpen ? "is-open" : ""
-            }`}
-            aria-label="Open navigation"
-            aria-expanded={mobileMenuOpen}
-            onClick={() =>
-              setMobileMenuOpen((currentValue) => !currentValue)
-            }
-          >
-            <span />
-            <span />
-          </button>
-        </div>
-      </header>
-
       <main id="top">
         <section className="hero-section" id="overview">
           <div className="hero-decoration" />
 
           <div className="hero-inner">
-            <div className="hero-content">
-              <div className="hero-label">
-                <span className="status-dot" />
-                Private car for sale · Islamabad
-              </div>
-
+            <div className="hero-copy">
               <h1 className="hero-title">
                 Honda BR-V
                 <span>i-VTEC S</span>
               </h1>
 
-              <p className="hero-description">
-                A family-used Honda BR-V with service history
-                available, located in G-10, Islamabad and ready for
-                inspection.
-              </p>
-
-              <div className="hero-price">
-                <span>Asking price</span>
-                <strong>PKR 5,150,000</strong>
-              </div>
-
-              <div className="hero-buttons">
-                <a
-                  href={getWhatsAppUrl("hero")}
-                  className="whatsapp-button"
-                  onClick={(event) =>
-                    handleWhatsAppClick(event, "hero")
-                  }
-                >
-                  <WhatsAppIcon />
-                  <span>Message on WhatsApp</span>
-                  <ArrowIcon />
-                </a>
-
-                <a href="#gallery" className="outline-button">
-                  View All Photos
-                </a>
-              </div>
-
-              <div className="hero-location">
-                <span className="round-check">✓</span>
-
-                <p>
-                  Located in G-10, Islamabad
-                  <small>Available for physical inspection</small>
+              <div className="hero-details">
+                <p className="hero-description">
+                  A family-used Honda BR-V with service history
+                  available, located in G-10, Islamabad and ready for
+                  inspection.
                 </p>
+
+                <div className="hero-price">
+                  <span>Asking price</span>
+                  <strong>{CAR_PRICE}</strong>
+                </div>
+
+                <div
+                  className="hero-buttons"
+                  data-hide-mobile-sticky
+                >
+                  <a
+                    href={getWhatsAppUrl("hero")}
+                    className="whatsapp-button"
+                    onClick={(event) =>
+                      handleWhatsAppClick(event, "hero")
+                    }
+                  >
+                    <WhatsAppIcon />
+                    <span>Message on WhatsApp</span>
+                    <ArrowIcon />
+                  </a>
+
+                  <a href="#gallery" className="outline-button">
+                    View All Photos
+                  </a>
+                </div>
+
+                {pakWheelsAvailable && (
+                  <a
+                    href={PAKWHEELS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pakwheels-link"
+                    onClick={() => handlePakWheelsClick("hero")}
+                  >
+                    Also listed on PakWheels.com
+                    <ArrowIcon />
+                  </a>
+                )}
               </div>
             </div>
 
-            <div className="hero-image-area">
-              <div className="hero-image-box">
-                <Image
-                  src="/images/car/hero.webp"
-                  alt="Honda BR-V i-VTEC S for sale in Islamabad"
-                  fill
-                  priority
-                  sizes="(max-width: 900px) 100vw, 56vw"
-                  className="cover-image"
-                />
+            <div className="hero-slider-area">
+              <Swiper
+                className="hero-swiper"
+                modules={[Navigation, Pagination, Keyboard, A11y]}
+                navigation
+                pagination={{
+                  clickable: true,
+                }}
+                keyboard={{
+                  enabled: true,
+                }}
+                loop
+                grabCursor
+                watchOverflow
+                speed={450}
+                spaceBetween={12}
+                slidesPerView={1}
+              >
+                {carImages.map((image, index) => (
+                  <SwiperSlide key={image.src}>
+                    <button
+                      type="button"
+                      className="hero-slide"
+                      aria-label={`Open ${image.alt}`}
+                      onClick={() => setActiveImageIndex(index)}
+                    >
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        preload={index === 0}
+                        sizes="(max-width: 900px) 100vw, 56vw"
+                        className="cover-image"
+                      />
 
-                <div className="hero-image-badge">
-                  <span>Private sale</span>
-                  <strong>Family used</strong>
-                </div>
-              </div>
+                      <span className="hero-slide-overlay" />
 
-              <div className="mileage-card">
-                <small>Mileage</small>
-                <strong>103,000</strong>
-                <span>Kilometres</span>
-              </div>
+                      <span className="hero-slide-information">
+                        <span>
+                          <small>{image.category}</small>
+                          <strong>{image.alt}</strong>
+                        </span>
+
+                        <span className="hero-slide-number">
+                          {String(index + 1).padStart(2, "0")} /{" "}
+                          {String(carImages.length).padStart(2, "0")}
+                        </span>
+                      </span>
+                    </button>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            <div className="hero-mobile-location">
+              <span className="round-check">✓</span>
+
+              <p>
+                Located in G-10, Islamabad
+                <small>Available for physical inspection</small>
+              </p>
             </div>
           </div>
         </section>
@@ -520,8 +529,8 @@ export default function HomePage() {
 
               <p className="section-description">
                 Clear information, actual vehicle photographs and
-                direct contact with the seller help serious buyers
-                make a faster decision.
+                direct contact with the seller help serious buyers make
+                a faster decision.
               </p>
             </div>
 
@@ -560,61 +569,82 @@ export default function HomePage() {
               </div>
 
               <p className="section-description">
-                Select any photograph to open the full-screen
-                vehicle gallery.
+                Swipe or use the arrows to view every photograph.
+                Select any image to open the full-screen gallery.
               </p>
             </div>
 
-            <div className="gallery-grid">
-              {carImages.slice(0, 5).map((image, index) => (
-                <button
-                  type="button"
-                  className={`gallery-card ${
-                    index === 0 ? "is-featured" : ""
-                  }`}
-                  key={image.src}
-                  aria-label={`Open ${image.alt}`}
-                  onClick={() => setActiveImageIndex(index)}
-                >
-                  <Image
-                    src={image.src}
-                    alt={image.alt}
-                    fill
-                    sizes={
-                      index === 0
-                        ? "(max-width: 767px) 100vw, 50vw"
-                        : "(max-width: 767px) 50vw, 25vw"
-                    }
-                    className="cover-image gallery-image"
-                  />
-
-                  <span className="gallery-card-overlay">
-                    <small>{image.category}</small>
-
-                    <strong>
-                      {String(index + 1).padStart(2, "0")} /{" "}
-                      {String(carImages.length).padStart(2, "0")}
-                    </strong>
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              className="view-gallery-button"
-              onClick={() => setActiveImageIndex(0)}
+            <Swiper
+              className="gallery-swiper"
+              modules={[Navigation, Pagination, Keyboard, A11y]}
+              navigation
+              pagination={{
+                clickable: true,
+              }}
+              keyboard={{
+                enabled: true,
+              }}
+              grabCursor
+              watchOverflow
+              speed={450}
+              spaceBetween={14}
+              slidesPerView={1.08}
+              breakpoints={{
+                560: {
+                  slidesPerView: 1.7,
+                },
+                768: {
+                  slidesPerView: 2.2,
+                },
+                1100: {
+                  slidesPerView: 3.1,
+                },
+              }}
             >
-              View All {carImages.length} Photos
-              <ArrowIcon />
-            </button>
+              {carImages.map((image, index) => (
+                <SwiperSlide key={image.src}>
+                  <button
+                    type="button"
+                    className="gallery-slide"
+                    aria-label={`Open ${image.alt}`}
+                    onClick={() => setActiveImageIndex(index)}
+                  >
+                    <Image
+                      src={image.src}
+                      alt={image.alt}
+                      fill
+                      sizes="(max-width: 767px) 92vw, 34vw"
+                      className="cover-image gallery-image"
+                    />
+
+                    <span className="gallery-slide-overlay" />
+
+                    <span className="gallery-slide-caption">
+                      <span>
+                        <small>{image.category}</small>
+                        <strong>{image.alt}</strong>
+                      </span>
+
+                      <span>
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                    </span>
+                  </button>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         </section>
 
         <section className="condition-section">
           <div className="page-container">
             <div className="condition-grid">
-              <div className="condition-photo">
+              <button
+                type="button"
+                className="condition-photo"
+                onClick={() => setActiveImageIndex(3)}
+                aria-label="Open rear-left Honda BR-V photograph"
+              >
                 <Image
                   src="/images/car/exterior-rear-left.webp"
                   alt="Rear-left view of Honda BR-V"
@@ -627,7 +657,7 @@ export default function HomePage() {
                   <span>Actual vehicle photo</span>
                   <strong>Inspect with confidence</strong>
                 </div>
-              </div>
+              </button>
 
               <div className="condition-content">
                 <span className="section-label light-label">
@@ -671,20 +701,22 @@ export default function HomePage() {
                   </li>
                 </ul>
 
-                <a
-                  href={getWhatsAppUrl("condition-section")}
-                  className="whatsapp-button"
-                  onClick={(event) =>
-                    handleWhatsAppClick(
-                      event,
-                      "condition-section",
-                    )
-                  }
-                >
-                  <WhatsAppIcon />
-                  <span>Ask About the Condition</span>
-                  <ArrowIcon />
-                </a>
+                <div data-hide-mobile-sticky>
+                  <a
+                    href={getWhatsAppUrl("condition-section")}
+                    className="whatsapp-button"
+                    onClick={(event) =>
+                      handleWhatsAppClick(
+                        event,
+                        "condition-section",
+                      )
+                    }
+                  >
+                    <WhatsAppIcon />
+                    <span>Ask About the Condition</span>
+                    <ArrowIcon />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -708,17 +740,37 @@ export default function HomePage() {
                   documents, token-tax and inspection information.
                 </p>
 
-                <a
-                  href={getWhatsAppUrl("vehicle-details")}
-                  className="text-link"
-                  onClick={(event) =>
-                    handleWhatsAppClick(event, "vehicle-details")
-                  }
-                >
-                  <WhatsAppIcon />
-                  <span>Request Complete Details</span>
-                  <ArrowIcon />
-                </a>
+                <div data-hide-mobile-sticky>
+                  <a
+                    href={getWhatsAppUrl("vehicle-details")}
+                    className="text-link"
+                    onClick={(event) =>
+                      handleWhatsAppClick(
+                        event,
+                        "vehicle-details",
+                      )
+                    }
+                  >
+                    <WhatsAppIcon />
+                    <span>Request Complete Details</span>
+                    <ArrowIcon />
+                  </a>
+                </div>
+
+                {pakWheelsAvailable && (
+                  <a
+                    href={PAKWHEELS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pakwheels-details-link"
+                    onClick={() =>
+                      handlePakWheelsClick("vehicle-details")
+                    }
+                  >
+                    View PakWheels Listing
+                    <ArrowIcon />
+                  </a>
+                )}
               </div>
 
               <div className="vehicle-details-table">
@@ -816,14 +868,17 @@ export default function HomePage() {
                 Current asking price
               </span>
 
-              <h2>PKR 5,150,000</h2>
+              <h2>{CAR_PRICE}</h2>
 
               <p>
                 Serious buyers can contact the seller directly and
                 arrange a physical inspection in G-10, Islamabad.
               </p>
 
-              <div className="price-buttons">
+              <div
+                className="price-buttons"
+                data-hide-mobile-sticky
+              >
                 <a
                   href={getWhatsAppUrl("price-section")}
                   className="white-whatsapp-button"
@@ -855,7 +910,7 @@ export default function HomePage() {
 
               <div>
                 <span>Mileage</span>
-                <strong>103,000 km</strong>
+                <strong>{CAR_MILEAGE}</strong>
               </div>
 
               <div>
@@ -889,7 +944,10 @@ export default function HomePage() {
                   the seller confirms a suitable inspection time.
                 </p>
 
-                <div className="location-buttons">
+                <div
+                  className="location-buttons"
+                  data-hide-mobile-sticky
+                >
                   <a
                     href={getWhatsAppUrl("location-section")}
                     className="whatsapp-button"
@@ -952,21 +1010,23 @@ export default function HomePage() {
                 </h2>
 
                 <p>
-                  Contact the seller directly when you need the
-                  latest availability or vehicle information.
+                  Contact the seller directly when you need the latest
+                  availability or vehicle information.
                 </p>
 
-                <a
-                  href={getWhatsAppUrl("faq-section")}
-                  className="text-link"
-                  onClick={(event) =>
-                    handleWhatsAppClick(event, "faq-section")
-                  }
-                >
-                  <WhatsAppIcon />
-                  <span>Ask Another Question</span>
-                  <ArrowIcon />
-                </a>
+                <div data-hide-mobile-sticky>
+                  <a
+                    href={getWhatsAppUrl("faq-section")}
+                    className="text-link"
+                    onClick={(event) =>
+                      handleWhatsAppClick(event, "faq-section")
+                    }
+                  >
+                    <WhatsAppIcon />
+                    <span>Ask Another Question</span>
+                    <ArrowIcon />
+                  </a>
+                </div>
               </div>
 
               <div className="faq-list">
@@ -1026,7 +1086,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="contact-cards">
+            <div
+              className="contact-cards"
+              data-hide-mobile-sticky
+            >
               <a
                 href={getWhatsAppUrl("contact-section")}
                 className="contact-card whatsapp-contact-card"
@@ -1103,18 +1166,14 @@ export default function HomePage() {
         <div className="page-container">
           <div className="footer-main">
             <div>
-              <a
-                href="#top"
-                className="footer-logo"
-                aria-label="Go to the top"
-              >
+              <div className="footer-brand">
                 <span className="logo-symbol">H</span>
 
                 <span className="logo-text">
                   <strong>Honda BR-V</strong>
                   <small>Private Sale</small>
                 </span>
-              </a>
+              </div>
 
               <p>
                 Honda BR-V i-VTEC S available for inspection in
@@ -1122,7 +1181,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="footer-buttons">
+            <div
+              className="footer-buttons"
+              data-hide-mobile-sticky
+            >
               <a
                 href={getWhatsAppUrl("footer")}
                 className="footer-whatsapp-button"
@@ -1142,6 +1204,19 @@ export default function HomePage() {
                 <PhoneIcon />
                 <span>Call Seller</span>
               </a>
+
+              {pakWheelsAvailable && (
+                <a
+                  href={PAKWHEELS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-pakwheels-button"
+                  onClick={() => handlePakWheelsClick("footer")}
+                >
+                  <span>View on PakWheels</span>
+                  <ArrowIcon />
+                </a>
+              )}
             </div>
           </div>
 
@@ -1153,12 +1228,16 @@ export default function HomePage() {
               payment.
             </p>
 
-            <span>Demand: PKR 5,150,000</span>
+            <span>Asking price: {CAR_PRICE}</span>
           </div>
         </div>
       </footer>
 
-      <div className="mobile-sticky-buttons">
+      <div
+        className={`mobile-sticky-buttons ${
+          showMobileSticky ? "is-visible" : "is-hidden"
+        }`}
+      >
         <a
           href={`tel:${PHONE_NUMBER}`}
           className="mobile-call-button"
@@ -1197,61 +1276,64 @@ export default function HomePage() {
             ×
           </button>
 
-          <button
-            type="button"
-            className="lightbox-arrow lightbox-previous"
-            aria-label="Previous photograph"
-            onClick={(event) => {
-              event.stopPropagation();
-              showPreviousImage();
-            }}
-          >
-            ←
-          </button>
-
           <div
-            className="lightbox-content"
+            className="lightbox-slider-container"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="lightbox-image">
-              <Image
-                src={carImages[activeImageIndex].src}
-                alt={carImages[activeImageIndex].alt}
-                fill
-                sizes="100vw"
-                className="contain-image"
-              />
-            </div>
+            <Swiper
+              key={`lightbox-${activeImageIndex}`}
+              className="lightbox-swiper"
+              modules={[Navigation, Pagination, Keyboard, A11y]}
+              initialSlide={activeImageIndex}
+              navigation
+              pagination={{
+                clickable: true,
+              }}
+              keyboard={{
+                enabled: true,
+              }}
+              grabCursor
+              watchOverflow
+              observer
+              observeParents
+              speed={400}
+              spaceBetween={20}
+              slidesPerView={1}
+            >
+              {carImages.map((image, index) => (
+                <SwiperSlide key={image.src}>
+                  <div className="lightbox-slide">
+                    <div className="lightbox-image">
+                      <img
+                        src={image.src}
+                        alt={image.alt}
+                        className="lightbox-full-image"
+                        loading={
+                          index === activeImageIndex ? "eager" : "lazy"
+                        }
+                        decoding="async"
+                        fetchPriority={
+                          index === activeImageIndex ? "high" : "auto"
+                        }
+                      />
+                    </div>
 
-            <div className="lightbox-caption">
-              <div>
-                <small>
-                  {carImages[activeImageIndex].category}
-                </small>
+                    <div className="lightbox-caption">
+                      <div>
+                        <small>{image.category}</small>
+                        <strong>{image.alt}</strong>
+                      </div>
 
-                <strong>
-                  {carImages[activeImageIndex].alt}
-                </strong>
-              </div>
-
-              <span>
-                {String(activeImageIndex + 1).padStart(2, "0")} /{" "}
-                {String(carImages.length).padStart(2, "0")}
-              </span>
-            </div>
+                      <span>
+                        {String(index + 1).padStart(2, "0")} /{" "}
+                        {String(carImages.length).padStart(2, "0")}
+                      </span>
+                    </div>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
-
-          <button
-            type="button"
-            className="lightbox-arrow lightbox-next"
-            aria-label="Next photograph"
-            onClick={(event) => {
-              event.stopPropagation();
-              showNextImage();
-            }}
-          >
-            →
-          </button>
         </div>
       )}
     </>

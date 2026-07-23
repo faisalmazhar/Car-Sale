@@ -13,14 +13,14 @@ export const metadata: Metadata = {
   title: "Honda BR-V i-VTEC S for Sale in Islamabad",
 
   description:
-    "Family-used Honda BR-V i-VTEC S for sale in G-10, Islamabad. Demand PKR 5,150,000.",
+    "Family-used Honda BR-V i-VTEC S for sale in G-10, Islamabad. Asking price PKR 498,000.",
 
   keywords: [
     "Honda BR-V for sale",
     "Honda BR-V Islamabad",
-    "used car for sale Islamabad",
     "Honda BR-V i-VTEC S",
-    "Honda BR-V G-10",
+    "used car for sale Islamabad",
+    "car for sale G-10 Islamabad",
   ],
 
   alternates: {
@@ -43,7 +43,6 @@ export const metadata: Metadata = {
     ],
   },
 };
-
 
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;

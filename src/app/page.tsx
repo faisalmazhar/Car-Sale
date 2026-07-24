@@ -24,7 +24,7 @@ const PHONE_NUMBER = "+923343868945";
 /* Leave empty to hide PakWheels links. */
 const PAKWHEELS_URL = "";
 
-const CAR_PRICE = "PKR 4,98,0000";
+const CAR_PRICE = "PKR 4,98,000";
 const CAR_MILEAGE = "103,000 km";
 
 type CarImage = {

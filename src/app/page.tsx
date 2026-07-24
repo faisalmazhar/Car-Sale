@@ -24,7 +24,7 @@ const PHONE_NUMBER = "+923343868945";
 /* Leave empty to hide PakWheels links. */
 const PAKWHEELS_URL = "";
 
-const CAR_PRICE = "PKR 4,98,000";
+const CAR_PRICE = "PKR 49,80,000";
 const CAR_MILEAGE = "103,000 km";
 
 type CarImage = {
@@ -177,7 +177,7 @@ const faqs = [
   {
     question: "Is the price negotiable?",
     answer:
-      "The current asking price is PKR 4,98,0000. Any negotiation should be discussed directly with the seller.",
+      "The current asking price is PKR 49,80,000. Any negotiation should be discussed directly with the seller.",
   },
 ];
 

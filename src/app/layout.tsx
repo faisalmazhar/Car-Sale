@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "Honda BR-V i-VTEC S for Sale in Islamabad",
 
   description:
-    "Family-used Honda BR-V i-VTEC S for sale in G-10, Islamabad. Asking price PKR 4,98,000.",
+    "Family-used Honda BR-V i-VTEC S for sale in G-10, Islamabad. Asking price PKR 49,80,000.",
 
   keywords: [
     "Honda BR-V for sale",
